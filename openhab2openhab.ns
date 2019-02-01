@@ -1,0 +1,107 @@
+/**
+ * Get a property from a thing and update an item
+ *
+ */
+importScripts = require('./importscripts.js').importScripts;
+importScripts('./settings.ns');
+importScripts('./myLog.ns');
+importScripts('./myTime.ns');
+
+let XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+let got = require('got');
+
+setCurrentLogLevel(LOGLEVEL_DEBUG);
+
+if (isInfo()) {
+    console.log(myTime_ts() + " Starting openhab2openhab");
+}
+
+const DELAY_BETWEEN_CALLS = 5*1000; // 5 seconds
+
+let serverStatusMessage = '';
+
+// Run 5 minute after first run if parameter 'forever' is present
+let runForEver = false;
+process.argv.forEach(function (val) {
+    if ('forever' === val) {
+        runForEver = true;
+    }
+});
+
+setTimeout(() => {
+    runUpdate();
+    if (runForEver) {
+        setInterval(() => {
+            runUpdate();
+        }, 5 * 60 * 1000);
+    }
+}, 1000);
+
+function runUpdate() {
+    setTimeout( () => {
+            const fromUrl = OPENHAB_URL + '/rest/things/' + OPENHAB_THING_ToBeRead;
+            getUpdate(fromUrl, OPENHAB_ITEM_ToBeSet);
+            },
+        DELAY_BETWEEN_CALLS);
+}
+
+function getUpdate(fromUrl, openhabItem) {
+    (async () => {
+        try {
+            if (isTrace()) {
+                console.log('Retrieving data from URL: ' + fromUrl);
+            }
+            const response = await got(fromUrl);
+            if (response.body) {
+                let jsonData = JSON.parse(response.body);
+                if (isTrace()) {
+                    console.log(JSON.stringify(jsonData, null, '  '));
+                }
+                let lastWakeUpTime = jsonData.properties[OPENHAB_THING_PROP_ToBeRead];
+                if (isInfo()) {
+                    console.log( myTime_ts() + ' Thing: ' + OPENHAB_THING_ToBeRead + ', Property: ' + OPENHAB_THING_PROP_ToBeRead + ' => ' + lastWakeUpTime );
+                }
+                updateItem(openhabItem, lastWakeUpTime);
+            } else {
+                if (isError()) {
+                    console.log('No response.body returned...');
+                }
+            }
+        } catch (error) {
+            if (isError()) {
+                console.log(error.response);
+            }
+        }
+    })();
+}
+
+
+
+/**
+ * Update an openHAB Item
+ *
+ * @param itemId
+ * @param value
+ */
+function updateItem(itemId, value) {
+    let xhr_updateItem = new XMLHttpRequest();
+    xhr_updateItem.withCredentials = true;
+    xhr_updateItem.addEventListener("readystatechange", function () {
+        if (this.readyState === this.DONE) {
+            if (this.status === 200) {
+                let res = this.responseText;
+                if (isTrace()) {
+                    console.log(myTime_ts() + " " + this.status +  " OK => Response: ", res);
+                }
+            } else {
+                let res = this.responseText;
+                if (isError()) {
+                    console.log(myTime_ts() + " " + this.status +  " " + this.statusText + " => Response: ", JSON.stringify(res, null, 2) );
+                }
+            }
+        }
+    });
+    xhr_updateItem.open('POST', OPENHAB_URL + '/rest/items/' + itemId);
+    xhr_updateItem.setRequestHeader("accept", "application/json");
+    xhr_updateItem.send(value);
+}

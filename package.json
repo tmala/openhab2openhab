@@ -1,0 +1,20 @@
+{
+  "name": "checkserver2openhab",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tmala/checkserver2openhab.git"
+  },
+  "version": "1.0.0",
+  "description": "Gets data from api.nilu.no and updates items in openHAB",
+  "main": "openhab2openhab.ns",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tor Mala",
+  "license": "MIT",
+  "dependencies": {
+    "npm": "^6.7.0",
+    "got": "^8.3.0",
+    "xmlhttprequest": "^1.8.0"
+  }
+}
